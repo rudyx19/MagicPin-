@@ -25,3 +25,4 @@ python make_submission.py                     # -> submission.jsonl (30 test pai
 
 Endpoints: `POST /v1/context` · `POST /v1/tick` · `POST /v1/reply` · `GET /v1/healthz` · `GET /v1/metadata` · `POST /v1/teardown`. Config via env (see `.env.example`). Deploy anywhere always-on (Dockerfile / Procfile / render.yaml included) — avoid free tiers that sleep, since 3 failed health checks disqualify.
 # MagicPin-
+# MagicPin-
