@@ -1,0 +1,666 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vera++ Console</title>
+<style>
+  :root {
+    --bg: #f4f6f5; --panel: #ffffff; --panel-2: #f8faf9; --text: #15201b; --muted: #5f6d66; --line: #e2e8e5;
+    --accent: #0f8a5f; --accent-soft: #e3f4ec; --accent-text: #ffffff;
+    --bot: #dcf5e7; --bot-text: #10251b; --them: #ffffff; --them-text: #15201b; --chat-bg: #eef2ef;
+    --warn: #b45309; --warn-soft: #fdf1e3; --bad: #b42318; --bad-soft: #fde9e7; --info-soft: #e8eef9; --info: #2852a3;
+    --shadow: 0 1px 2px rgba(16, 32, 24, .06), 0 2px 8px rgba(16, 32, 24, .05);
+    --radius: 12px; --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0e1412; --panel: #151d1a; --panel-2: #1a2420; --text: #e6eeea; --muted: #93a39b; --line: #26332e;
+      --accent: #34c38f; --accent-soft: #163329; --accent-text: #06140e;
+      --bot: #1d4434; --bot-text: #e9f6ef; --them: #1f2a26; --them-text: #e6eeea; --chat-bg: #111917;
+      --warn: #f0a44b; --warn-soft: #33260f; --bad: #f2786d; --bad-soft: #3a1714; --info-soft: #18233a; --info: #8fb0f0;
+      --shadow: 0 1px 2px rgba(0, 0, 0, .3);
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body { background: var(--bg); color: var(--text); font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans", sans-serif; }
+  button, input, select { font: inherit; color: inherit; }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 16px; }
+
+  /* header */
+  header { background: var(--panel); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 5; }
+  .bar { display: flex; align-items: center; gap: 14px; padding: 12px 0; flex-wrap: wrap; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 17px; letter-spacing: -.01em; }
+  .logo { width: 30px; height: 30px; border-radius: 9px; background: var(--accent); color: var(--accent-text); display: grid; place-items: center; font-weight: 800; }
+  .brand small { display: block; font-weight: 500; font-size: 12px; color: var(--muted); letter-spacing: 0; }
+  .pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; background: var(--panel-2); border: 1px solid var(--line); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+  .pill.ok .dot { background: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .pill.down .dot { background: var(--bad); }
+  .meta { color: var(--muted); font-size: 12px; margin-left: auto; display: flex; gap: 14px; flex-wrap: wrap; }
+  nav { display: flex; gap: 4px; overflow-x: auto; }
+  nav button { white-space: nowrap; background: none; border: 0; padding: 10px 14px; border-bottom: 2px solid transparent; color: var(--muted); font-weight: 600; cursor: pointer; }
+  nav button.on { color: var(--text); border-bottom-color: var(--accent); }
+
+  main { padding: 20px 0 40px; }
+  .tab { display: none; } .tab.on { display: block; }
+  .grid { display: grid; gap: 14px; }
+  .stats { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .two { grid-template-columns: 1.2fr 1fr; align-items: start; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px; min-width: 0; }
+  .card h3 { margin: 0 0 4px; font-size: 14px; }
+  .card p.sub { margin: 0 0 12px; color: var(--muted); font-size: 13px; }
+  .stat .n { font-size: 28px; font-weight: 700; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+  .stat .l { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .05em; font-weight: 600; }
+  .stat .exp { color: var(--muted); font-size: 12px; }
+
+  .btn { border: 1px solid var(--line); background: var(--panel-2); padding: 7px 12px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 13px; }
+  .btn:hover { border-color: var(--muted); }
+  a.btn { color: var(--text); display: inline-flex; align-items: center; }
+  .btn.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+  .btn.danger { color: var(--bad); border-color: var(--bad); background: var(--bad-soft); }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  code, .mono { font-family: var(--mono); font-size: 12.5px; }
+  .url { background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  .eps { list-style: none; padding: 0; margin: 12px 0 0; display: grid; gap: 6px; }
+  .eps li { display: flex; gap: 8px; align-items: baseline; font-size: 13px; }
+  .m { font-family: var(--mono); font-size: 11px; font-weight: 700; padding: 1px 6px; border-radius: 5px; background: var(--info-soft); color: var(--info); min-width: 44px; text-align: center; }
+  .m.post { background: var(--accent-soft); color: var(--accent); }
+  .eps .d { color: var(--muted); }
+  .eps a { color: var(--accent); text-decoration: none; }
+  .eps a:hover { text-decoration: underline; }
+
+  .drop { border: 1.5px dashed var(--line); border-radius: 10px; padding: 18px; text-align: center; color: var(--muted); background: var(--panel-2); transition: .15s; }
+  .drop.over { border-color: var(--accent); background: var(--accent-soft); color: var(--text); }
+  .log { font-family: var(--mono); font-size: 12px; color: var(--muted); margin-top: 10px; max-height: 120px; overflow: auto; white-space: pre-wrap; }
+  .note { background: var(--warn-soft); color: var(--warn); border-radius: 8px; padding: 8px 10px; font-size: 12.5px; margin-top: 10px; }
+
+  /* playground */
+  .play { display: grid; grid-template-columns: 360px minmax(0, 1fr); gap: 14px; align-items: start; }
+  .list { max-height: calc(100vh - 290px); min-height: 300px; overflow: auto; margin: 0 -16px -16px; border-top: 1px solid var(--line); }
+  .titem { padding: 10px 16px; border-bottom: 1px solid var(--line); cursor: pointer; display: grid; gap: 2px; }
+  .titem:hover { background: var(--panel-2); }
+  .titem.on { background: var(--accent-soft); }
+  .titem .t1 { display: flex; gap: 6px; align-items: center; font-weight: 600; font-size: 13px; }
+  .titem .t2 { color: var(--muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .chip { display: inline-block; font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 999px; background: var(--panel-2); border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
+  .chip.u4, .chip.u5 { background: var(--bad-soft); color: var(--bad); border-color: transparent; }
+  .chip.u3 { background: var(--warn-soft); color: var(--warn); border-color: transparent; }
+  .chip.cust { background: var(--info-soft); color: var(--info); border-color: transparent; }
+  .chip.ok { background: var(--accent-soft); color: var(--accent); border-color: transparent; }
+  .filters { display: grid; gap: 8px; margin-bottom: 12px; }
+  .filters input, .filters select { width: 100%; padding: 7px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel-2); }
+  .filters label { font-size: 12px; color: var(--muted); display: flex; gap: 6px; align-items: center; }
+
+  .chat { display: flex; flex-direction: column; height: calc(100vh - 150px); min-height: 520px; padding: 0; overflow: hidden; }
+  .chead { display: flex; gap: 10px; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+  .avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; font-weight: 700; flex: none; }
+  .chead .who { font-weight: 700; } .chead .sub2 { color: var(--muted); font-size: 12px; }
+  .cbody { flex: 1; overflow: auto; background: var(--chat-bg); padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+  .bubble { max-width: min(560px, 88%); padding: 9px 12px; border-radius: 12px; white-space: pre-wrap; overflow-wrap: anywhere; box-shadow: var(--shadow); }
+  .bubble.bot { align-self: flex-end; background: var(--bot); color: var(--bot-text); border-bottom-right-radius: 4px; }
+  .bubble.them { align-self: flex-start; background: var(--them); color: var(--them-text); border-bottom-left-radius: 4px; }
+  .bubble .who { font-size: 11px; font-weight: 700; opacity: .7; margin-bottom: 2px; }
+  .sys { align-self: center; font-size: 12px; color: var(--muted); background: var(--panel); border: 1px solid var(--line); padding: 4px 10px; border-radius: 999px; max-width: 92%; text-align: center; }
+  .sys.end { color: var(--bad); } .sys.wait { color: var(--warn); }
+  .metarow { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+  details.why { margin-top: 6px; font-size: 12px; }
+  details.why summary { cursor: pointer; font-weight: 600; opacity: .8; }
+  details.why div { margin-top: 4px; opacity: .85; white-space: pre-wrap; }
+  .cfoot { border-top: 1px solid var(--line); padding: 10px 12px; display: grid; gap: 8px; background: var(--panel); }
+  .quick { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; }
+  .quick button { flex: none; border: 1px solid var(--line); background: var(--panel-2); border-radius: 999px; padding: 4px 10px; font-size: 12px; cursor: pointer; }
+  .quick button:hover { border-color: var(--accent); }
+  .compose { display: flex; gap: 8px; }
+  .compose input { flex: 1; min-width: 0; padding: 9px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel-2); }
+  .empty { margin: auto; text-align: center; color: var(--muted); max-width: 380px; padding: 20px; }
+  .empty b { color: var(--text); display: block; margin-bottom: 4px; font-size: 15px; }
+
+  /* live */
+  .conv { border: 1px solid var(--line); border-radius: 10px; background: var(--panel); margin-bottom: 8px; overflow: hidden; }
+  .conv > summary { list-style: none; cursor: pointer; padding: 10px 14px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .conv > summary::-webkit-details-marker { display: none; }
+  .conv > summary .nm { font-weight: 600; }
+  .conv > summary .id { color: var(--muted); font-family: var(--mono); font-size: 11.5px; margin-left: auto; }
+  .conv .cbody { max-height: 460px; border-top: 1px solid var(--line); }
+  .st-ended { background: var(--bad-soft); color: var(--bad); border-color: transparent; }
+  .st-waiting { background: var(--warn-soft); color: var(--warn); border-color: transparent; }
+  .st-active { background: var(--accent-soft); color: var(--accent); border-color: transparent; }
+
+  .toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 8px 14px; border-radius: 8px; font-size: 13px; opacity: 0; transition: .2s; pointer-events: none; z-index: 20; }
+  .toast.on { opacity: 1; }
+
+  /* api tester */
+  .two-eq { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
+  .inp { padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel-2); min-width: 0; }
+  .inp:focus, textarea.code:focus { outline: 2px solid var(--accent-soft); border-color: var(--accent); }
+  .fld { display: grid; gap: 4px; margin-bottom: 10px; }
+  .fld > span { font-size: 12px; color: var(--muted); font-weight: 600; }
+  textarea.code { width: 100%; min-height: 420px; resize: vertical; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--line);
+                  background: var(--panel-2); font-family: var(--mono); font-size: 12.5px; line-height: 1.45; tab-size: 2; }
+  pre.code { margin: 0; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel-2); font-family: var(--mono);
+             font-size: 12.5px; line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 520px; overflow: auto; }
+  .preview { display: flex; flex-direction: column; gap: 8px; background: var(--chat-bg); border-radius: 8px; padding: 12px; margin-bottom: 10px; }
+  .preview:empty { display: none; }
+  .chip.s2 { background: var(--accent-soft); color: var(--accent); border-color: transparent; }
+  .chip.s4, .chip.s5 { background: var(--bad-soft); color: var(--bad); border-color: transparent; }
+  .err { color: var(--bad); font-size: 12.5px; margin-top: 6px; }
+  .hint { color: var(--muted); font-size: 12px; }
+
+  @media (max-width: 900px) {
+    .two-eq { grid-template-columns: minmax(0, 1fr); }
+    textarea.code { min-height: 300px; }
+    .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .two, .play { grid-template-columns: minmax(0, 1fr); }
+    .list { max-height: 320px; }
+    .chat { height: 70vh; }
+    .meta { margin-left: 0; width: 100%; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="bar">
+      <div class="brand"><div class="logo">V</div><div>Vera++<small>merchant engagement bot</small></div></div>
+      <span class="pill" id="health"><span class="dot"></span><span id="healthTxt">checking…</span></span>
+      <div class="meta"><span id="mModel"></span><span id="mVersion"></span><span id="mUptime"></span></div>
+    </div>
+    <nav>
+      <button data-tab="api" class="on">API tester</button>
+      <button data-tab="play">Playground</button>
+      <button data-tab="live">Live conversations</button>
+      <button data-tab="overview">Status &amp; data</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <!-- API TESTER -->
+  <section class="tab on" id="tab-api">
+    <div class="card" style="margin-bottom:14px">
+      <h3>API tester</h3>
+      <p class="sub">Send test data, get the bot's output — like Postman, right here. Everything below is editable. <code>/v1/compose</code> needs no setup: put the test data in the body and press Send.</p>
+      <div class="row">
+        <input id="baseUrl" class="inp mono" style="flex:1" aria-label="Base URL">
+        <button class="btn" id="copyUrl">Copy URL</button>
+        <a class="btn" href="/postman.json" download="vera-bot.postman_collection.json" style="text-decoration:none">Download Postman collection</a>
+      </div>
+      <div class="hint" style="margin-top:6px">This base URL is what you submit on the portal. In Postman: import the collection, or create a request with method POST, Body → raw → JSON.</div>
+    </div>
+    <div class="grid two-eq">
+      <div class="card">
+        <h3 style="margin-bottom:10px">Request</h3>
+        <label class="fld"><span>Example</span><select id="preset" class="inp"></select></label>
+        <div class="row" style="margin-bottom:10px;flex-wrap:nowrap">
+          <select id="method" class="inp" style="width:auto"><option>POST</option><option>GET</option></select>
+          <input id="path" class="inp mono" style="flex:1" aria-label="Path">
+        </div>
+        <div class="row" id="fillRow" style="margin-bottom:10px;flex-wrap:nowrap">
+          <select id="fillTrig" class="inp" style="flex:1;min-width:0"><option value="">Use a trigger you loaded…</option></select>
+          <button class="btn" id="fillBtn">Fill body</button>
+        </div>
+        <label class="fld"><span>JSON body</span><textarea id="reqBody" class="code" spellcheck="false"></textarea></label>
+        <div id="reqErr" class="err"></div>
+        <div class="row">
+          <button class="btn primary" id="sendReq">Send</button>
+          <button class="btn" id="fmtBtn">Format JSON</button>
+          <button class="btn" id="curlBtn">Copy as cURL</button>
+          <button class="btn" id="resetBody">Reset example</button>
+          <span class="hint">⌘/Ctrl + Enter sends</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="row" style="margin-bottom:10px"><h3 style="margin:0">Response</h3><span id="resStatus"></span><span id="resTime"></span></div>
+        <div class="preview" id="resPreview"></div>
+        <pre class="code" id="resBody">Press Send to see the response.</pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- OVERVIEW -->
+  <section class="tab" id="tab-overview">
+    <div class="grid stats">
+      <div class="card stat"><div class="l">Categories</div><div class="n" id="cCat">–</div><div class="exp">judge pushes 5</div></div>
+      <div class="card stat"><div class="l">Merchants</div><div class="n" id="cMer">–</div><div class="exp">judge pushes 50</div></div>
+      <div class="card stat"><div class="l">Customers</div><div class="n" id="cCus">–</div><div class="exp">judge pushes 200</div></div>
+      <div class="card stat"><div class="l">Triggers</div><div class="n" id="cTrg">–</div><div class="exp">arrive during the test</div></div>
+    </div>
+
+    <div class="grid two" style="margin-top:14px">
+      <div class="card">
+        <h3>Endpoints</h3>
+        <p class="sub">The judge calls the first five. POST endpoints opened in a browser show usage help instead of an error.</p>
+        <ul class="eps">
+          <li><span class="m post">POST</span><code>/v1/context</code><span class="d">store category / merchant / customer / trigger</span></li>
+          <li><span class="m post">POST</span><code>/v1/tick</code><span class="d">bot decides what to send now</span></li>
+          <li><span class="m post">POST</span><code>/v1/reply</code><span class="d">merchant replied → send / wait / end</span></li>
+          <li><span class="m">GET</span><a href="/v1/healthz" target="_blank"><code>/v1/healthz</code></a><span class="d">liveness + counts</span></li>
+          <li><span class="m">GET</span><a href="/v1/metadata" target="_blank"><code>/v1/metadata</code></a><span class="d">bot identity</span></li>
+          <li><span class="m post">POST</span><code>/v1/compose</code><span class="d">test data in → message out (no setup)</span></li>
+          <li><span class="m post">POST</span><code>/v1/converse</code><span class="d">test data + replies in → bot replies out</span></li>
+          <li><span class="m">GET</span><a href="/postman.json" target="_blank"><code>/postman.json</code></a><span class="d">Postman collection</span></li>
+        </ul>
+      </div>
+
+      <div class="grid">
+        <div class="card">
+          <h3>Load test data</h3>
+          <p class="sub">Drop the challenge's <code>dataset</code> JSON files (or the generated folder) to try the bot. Data stays in this server's memory only.</p>
+          <div class="drop" id="drop">Drag JSON files here<br><span class="row" style="justify-content:center;margin-top:8px">
+            <label class="btn">Choose files<input type="file" id="fileIn" accept=".json,application/json" multiple hidden></label>
+            <label class="btn">Choose folder<input type="file" id="dirIn" webkitdirectory multiple hidden></label></span></div>
+          <div class="log" id="loadLog"></div>
+        </div>
+        <div class="card">
+          <h3>Reset</h3>
+          <p class="sub">Wipes every context and conversation (<code>POST /v1/teardown</code>).</p>
+          <button class="btn danger" id="resetBtn">Wipe all state</button>
+          <div class="note">Before the judge's evaluation starts, wipe any test data you loaded — otherwise its version-1 pushes are rejected as stale.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PLAYGROUND -->
+  <section class="tab" id="tab-play">
+    <div class="play">
+      <div class="card">
+        <h3>Triggers</h3>
+        <p class="sub">Pick one to see the exact message the bot would send, then reply as the merchant or customer. Sandbox only — the judge's state is never touched.</p>
+        <div class="filters">
+          <input id="q" placeholder="Search kind, merchant, customer…">
+          <div class="row" style="flex-wrap:nowrap">
+            <select id="fCat"><option value="">All categories</option></select>
+            <select id="fScope"><option value="">Merchant + customer</option><option value="merchant">Merchant-facing</option><option value="customer">Customer-facing</option></select>
+          </div>
+          <label title="The composer uses this as 'today' for day counts">Simulated now <input id="simNow" type="datetime-local" value="2026-04-26T10:00" style="width:auto;flex:1"></label>
+        </div>
+        <div class="list" id="tlist"></div>
+      </div>
+
+      <div class="card chat">
+        <div class="chead">
+          <div class="avatar" id="cAv">?</div>
+          <div style="min-width:0"><div class="who" id="cWho">No conversation</div><div class="sub2" id="cSub">Choose a trigger on the left</div></div>
+          <button class="btn" id="restart" style="margin-left:auto" disabled>Restart</button>
+        </div>
+        <div class="cbody" id="cbody"><div class="empty" id="emptyChat"><b>Nothing here yet</b>Load data on the Overview tab, then pick a trigger. You'll see the WhatsApp message, why it was written that way, and you can test replies like auto-replies, "let's do it", STOP or a GST question.</div></div>
+        <div class="cfoot">
+          <div class="quick" id="quick"></div>
+          <form class="compose" id="composeForm"><input id="msg" placeholder="Reply as the merchant…" autocomplete="off" disabled><button class="btn primary" id="sendBtn" disabled>Send</button></form>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- LIVE -->
+  <section class="tab" id="tab-live">
+    <div class="card" style="margin-bottom:14px">
+      <div class="row">
+        <div><h3>Live conversations</h3><p class="sub" style="margin:0">Everything the judge's ticks and replies produced, newest first.</p></div>
+        <label class="row" style="margin-left:auto;font-size:13px"><input type="checkbox" id="autoRef" checked> Auto-refresh</label>
+        <button class="btn" id="refLive">Refresh</button>
+      </div>
+    </div>
+    <div id="liveList"></div>
+  </section>
+</main>
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = (s) => document.querySelector(s);
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+const api = async (path, opts = {}) => {
+  const r = await fetch(path, { headers: { 'Content-Type': 'application/json' }, ...opts });
+  let j = {}; try { j = await r.json(); } catch (e) {}
+  return { ok: r.ok, status: r.status, data: j };
+};
+const post = (path, body) => api(path, { method: 'POST', body: JSON.stringify(body || {}) });
+const toast = (t) => { const x = $('#toast'); x.textContent = t; x.classList.add('on'); setTimeout(() => x.classList.remove('on'), 1800); };
+const human = (s) => String(s || '').replace(/_/g, ' ');
+const fmtUp = (s) => s < 60 ? `${s}s` : s < 3600 ? `${Math.floor(s / 60)}m` : `${Math.floor(s / 3600)}h ${Math.floor(s % 3600 / 60)}m`;
+
+/* tabs */
+const remember = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
+const recall = (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+function showTab(name) {
+  document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.tab === name));
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('on', t.id === 'tab-' + name));
+  remember('vera_tab', name);
+  if (name === 'play') loadContexts();
+  if (name === 'live') loadLive();
+  if (name === 'api') loadFillOptions();
+}
+document.querySelectorAll('nav button').forEach(b => b.onclick = () => showTab(b.dataset.tab));
+
+/* health + metadata */
+async function health() {
+  try {
+    const { ok, data } = await api('/v1/healthz');
+    const p = $('#health');
+    p.className = 'pill ' + (ok ? 'ok' : 'down');
+    $('#healthTxt').textContent = ok ? 'Live' : 'Unhealthy';
+    const c = data.contexts_loaded || {};
+    $('#cCat').textContent = c.category ?? '–'; $('#cMer').textContent = c.merchant ?? '–';
+    $('#cCus').textContent = c.customer ?? '–'; $('#cTrg').textContent = c.trigger ?? '–';
+    $('#mUptime').textContent = 'up ' + fmtUp(data.uptime_seconds || 0);
+  } catch (e) { $('#health').className = 'pill down'; $('#healthTxt').textContent = 'Offline'; }
+}
+async function meta() {
+  const { data } = await api('/v1/metadata');
+  $('#mModel').textContent = data.model || '';
+  $('#mVersion').textContent = data.version ? 'v' + data.version : '';
+}
+$('#baseUrl').value = recall('vera_base') || location.origin;
+$('#baseUrl').addEventListener('change', () => remember('vera_base', $('#baseUrl').value.trim()));
+const baseUrl = () => ($('#baseUrl').value.trim() || location.origin).replace(/\/+$/, '');
+$('#copyUrl').onclick = async () => { try { await navigator.clipboard.writeText(baseUrl()); toast('Copied'); } catch (e) { toast(baseUrl()); } };
+
+/* data loader */
+function extract(obj) {
+  const out = [];
+  if (Array.isArray(obj.merchants)) obj.merchants.forEach(m => out.push(['merchant', m.merchant_id, m]));
+  if (Array.isArray(obj.customers)) obj.customers.forEach(c => out.push(['customer', c.customer_id, c]));
+  if (Array.isArray(obj.triggers)) obj.triggers.forEach(t => out.push(['trigger', t.id, t]));
+  if (out.length) return out;
+  if (obj.slug && obj.offer_catalog) return [['category', obj.slug, obj]];
+  if (obj.customer_id && obj.identity) return [['customer', obj.customer_id, obj]];
+  if (obj.merchant_id && obj.identity) return [['merchant', obj.merchant_id, obj]];
+  if (obj.id && obj.kind && obj.scope) return [['trigger', obj.id, obj]];
+  return [];
+}
+async function pushCtx([scope, id, payload]) {
+  let v = 1;
+  for (let i = 0; i < 2; i++) {
+    const r = await post('/v1/context', { scope, context_id: id, version: v, payload, delivered_at: new Date().toISOString() });
+    if (r.ok) return true;
+    if (r.status === 409 && r.data.current_version != null) { v = r.data.current_version + 1; continue; }
+    return false;
+  }
+  return false;
+}
+async function loadFiles(files) {
+  const log = $('#loadLog');
+  const jsonFiles = [...files].filter(f => f.name.endsWith('.json'));
+  if (!jsonFiles.length) { log.textContent = 'No .json files found.'; return; }
+  let items = [];
+  for (const f of jsonFiles) {
+    try { items = items.concat(extract(JSON.parse(await f.text()))); } catch (e) { log.textContent += `skip ${f.name} (not JSON)\n`; }
+  }
+  const order = { category: 0, merchant: 1, customer: 2, trigger: 3 };
+  items.sort((a, b) => order[a[0]] - order[b[0]]);
+  log.textContent = `Pushing ${items.length} contexts…\n`;
+  let ok = 0, bad = 0, idx = 0;
+  const worker = async () => { while (idx < items.length) { const it = items[idx++]; (await pushCtx(it)) ? ok++ : bad++; } };
+  await Promise.all(Array.from({ length: 6 }, worker));
+  const by = items.reduce((a, [s]) => (a[s] = (a[s] || 0) + 1, a), {});
+  log.textContent += `Done: ${ok} stored${bad ? `, ${bad} failed` : ''} — ` + Object.entries(by).map(([k, v]) => `${v} ${k}`).join(', ') + '\n';
+  health(); ctxCache = null;
+}
+const drop = $('#drop');
+['dragenter', 'dragover'].forEach(e => drop.addEventListener(e, ev => { ev.preventDefault(); drop.classList.add('over'); }));
+['dragleave', 'drop'].forEach(e => drop.addEventListener(e, ev => { ev.preventDefault(); drop.classList.remove('over'); }));
+drop.addEventListener('drop', ev => loadFiles(ev.dataTransfer.files));
+$('#fileIn').onchange = (e) => loadFiles(e.target.files);
+$('#dirIn').onchange = (e) => loadFiles(e.target.files);
+$('#resetBtn').onclick = async () => {
+  if (!confirm('Wipe every context and conversation on this bot?')) return;
+  await post('/v1/teardown'); ctxCache = null; health(); toast('State wiped'); $('#loadLog').textContent = '';
+};
+
+/* playground */
+let ctxCache = null, sandbox = null, replyRole = 'merchant', activeTrigger = null;
+async function loadContexts() {
+  const { data } = await api('/ui/api/contexts');
+  ctxCache = data;
+  const sel = $('#fCat'); const cur = sel.value;
+  sel.innerHTML = '<option value="">All categories</option>';
+  (data.categories || []).forEach(c => sel.appendChild(new Option(human(c), c)));
+  sel.value = cur;
+  renderTriggers();
+}
+function renderTriggers() {
+  const box = $('#tlist'); box.innerHTML = '';
+  if (!ctxCache || !(ctxCache.triggers || []).length) {
+    box.appendChild(el('div', 'empty', 'No triggers loaded. Use "Load test data" on the Overview tab.')); return;
+  }
+  const q = $('#q').value.toLowerCase(), cat = $('#fCat').value, sc = $('#fScope').value;
+  const M = ctxCache.merchants || {}, C = ctxCache.customers || {};
+  let n = 0;
+  for (const t of ctxCache.triggers) {
+    const m = M[t.merchant_id] || {}, c = t.customer_id ? (C[t.customer_id] || {}) : null;
+    const isC = t.scope === 'customer' || !!t.customer_id;
+    if (cat && m.category !== cat) continue;
+    if (sc && (sc === 'customer') !== isC) continue;
+    const hay = `${t.kind} ${t.id} ${m.name} ${m.city} ${c ? c.name : ''}`.toLowerCase();
+    if (q && !hay.includes(q)) continue;
+    const row = el('div', 'titem' + (activeTrigger === t.id ? ' on' : ''));
+    const t1 = el('div', 't1');
+    t1.appendChild(el('span', null, human(t.kind)));
+    t1.appendChild(el('span', 'chip u' + (t.urgency || 0), 'u' + (t.urgency ?? '?')));
+    if (isC) t1.appendChild(el('span', 'chip cust', 'customer'));
+    if (t.placeholder) t1.appendChild(el('span', 'chip', 'no payload'));
+    if (t.sent) t1.appendChild(el('span', 'chip ok', 'sent'));
+    row.appendChild(t1);
+    row.appendChild(el('div', 't2', `${m.name || t.merchant_id}${m.city ? ' · ' + m.city : ''}${c ? ' → ' + (c.name || t.customer_id) : ''}`));
+    row.onclick = () => startSandbox(t.id);
+    box.appendChild(row); n++;
+  }
+  if (!n) box.appendChild(el('div', 'empty', 'No triggers match these filters.'));
+}
+['#q', '#fCat', '#fScope'].forEach(s => $(s).addEventListener('input', renderTriggers));
+
+function simNow() { const v = $('#simNow').value; return v ? v + ':00+05:30' : null; }
+function addBubble(container, who, text, cls, extra) {
+  const b = el('div', 'bubble ' + cls);
+  if (who) b.appendChild(el('div', 'who', who));
+  b.appendChild(document.createTextNode(text));
+  if (extra) b.appendChild(extra);
+  container.appendChild(b); container.scrollTop = container.scrollHeight;
+  return b;
+}
+function addSys(container, text, cls) { const s = el('div', 'sys ' + (cls || ''), text); container.appendChild(s); container.scrollTop = container.scrollHeight; }
+function msgMeta(m) {
+  const wrap = el('div');
+  const row = el('div', 'metarow');
+  [['CTA', m.cta], ['as', m.send_as], ['template', m.template_name], ['lang', m.lang]].forEach(([k, v]) => v && row.appendChild(el('span', 'chip', `${k}: ${v}`)));
+  wrap.appendChild(row);
+  const d = el('details', 'why'); d.appendChild(el('summary', null, 'Why this message?'));
+  d.appendChild(el('div', null, m.rationale || '')); wrap.appendChild(d);
+  return wrap;
+}
+const QUICK = {
+  merchant: ['Yes please', "Ok let's do it. What's next?", 'How does it work?', 'How much does it cost?',
+             'Thank you for contacting us! Our team will respond shortly.', 'haan theek hai, kar do',
+             'Can you also help me file my GST?', 'Not now, busy', 'This is useless', 'Stop messaging me'],
+  customer: ['1', '2', 'Yes', 'CONFIRM', 'Can I come Saturday evening?', 'Is it free?', 'Thanks', 'Stop'],
+};
+function renderQuick() {
+  const q = $('#quick'); q.innerHTML = '';
+  QUICK[replyRole].forEach(t => { const b = el('button', null, t); b.type = 'button'; b.onclick = () => sendReply(t); q.appendChild(b); });
+}
+async function startSandbox(tid) {
+  activeTrigger = tid; renderTriggers();
+  const body = $('#cbody'); body.innerHTML = '';
+  const { data } = await post('/ui/api/sandbox/start', { trigger_id: tid, now: simNow() });
+  if (data.error) { body.appendChild(el('div', 'empty', data.error)); return; }
+  sandbox = data.sandbox_id; replyRole = data.reply_role;
+  const m = data.message;
+  const t = (ctxCache.triggers || []).find(x => x.id === tid) || {};
+  const M = (ctxCache.merchants || {})[t.merchant_id] || {}, C = t.customer_id ? (ctxCache.customers || {})[t.customer_id] || {} : null;
+  const name = replyRole === 'customer' ? (C && C.name) || 'Customer' : (M.name || 'Merchant');
+  $('#cAv').textContent = (name || '?').trim()[0].toUpperCase();
+  $('#cWho').textContent = name;
+  $('#cSub').textContent = replyRole === 'customer'
+    ? `${M.name || ''} → customer (sent on the merchant's behalf) · ${human(t.kind)}`
+    : `Vera → merchant · ${human(t.kind)}${M.city ? ' · ' + M.city : ''}`;
+  addSys(body, `Trigger: ${human(t.kind)} · urgency ${t.urgency ?? '?'}${t.placeholder ? ' · placeholder payload' : ''}`);
+  addBubble(body, replyRole === 'customer' ? M.name : 'Vera', m.body, 'bot', msgMeta(m));
+  $('#msg').disabled = false; $('#sendBtn').disabled = false; $('#restart').disabled = false;
+  $('#msg').placeholder = `Reply as the ${replyRole}…`;
+  renderQuick(); $('#msg').focus();
+}
+async function sendReply(text) {
+  if (!sandbox || !text.trim()) return;
+  const body = $('#cbody');
+  addBubble(body, replyRole === 'customer' ? 'Customer' : 'Merchant', text, 'them');
+  $('#msg').value = '';
+  const { data } = await post('/ui/api/sandbox/reply', { sandbox_id: sandbox, message: text });
+  if (data.error) { addSys(body, data.error, 'end'); return; }
+  const a = data.action || {};
+  if (a.action === 'send') {
+    const extra = el('div');
+    const row = el('div', 'metarow');
+    if (data.label) row.appendChild(el('span', 'chip', `read as: ${human(data.label)}`));
+    if (a.cta) row.appendChild(el('span', 'chip', `CTA: ${a.cta}`));
+    extra.appendChild(row);
+    const d = el('details', 'why'); d.appendChild(el('summary', null, 'Why?')); d.appendChild(el('div', null, a.rationale || '')); extra.appendChild(d);
+    addBubble(body, null, a.body, 'bot', extra);
+  } else if (a.action === 'wait') {
+    addSys(body, `⏸ Bot waits ${fmtUp(a.wait_seconds || 0)} — ${a.rationale}`, 'wait');
+  } else if (a.action === 'end') {
+    addSys(body, `■ Conversation ended — ${a.rationale}`, 'end');
+  }
+}
+$('#composeForm').onsubmit = (e) => { e.preventDefault(); sendReply($('#msg').value); };
+$('#restart').onclick = () => activeTrigger && startSandbox(activeTrigger);
+
+/* live */
+let liveTimer = null; const openLive = new Set();
+async function loadLive() {
+  const { data } = await api('/ui/api/conversations');
+  const box = $('#liveList'); box.innerHTML = '';
+  const convs = data.conversations || [];
+  if (!convs.length) {
+    const c = el('div', 'card'); c.appendChild(el('div', 'empty', 'No conversations yet. They appear here when the judge calls /v1/tick and /v1/reply.'));
+    box.appendChild(c); return;
+  }
+  for (const c of convs) {
+    const d = el('details', 'conv'); d.open = openLive.has(c.conversation_id);
+    d.ontoggle = () => d.open ? openLive.add(c.conversation_id) : openLive.delete(c.conversation_id);
+    const s = el('summary');
+    s.appendChild(el('span', 'nm', c.merchant_name || c.merchant_id || 'unknown'));
+    if (c.customer_name) s.appendChild(el('span', 'chip cust', '→ ' + c.customer_name));
+    if (c.kind) s.appendChild(el('span', 'chip', human(c.kind)));
+    s.appendChild(el('span', 'chip st-' + (c.status || 'active'), c.status || 'active'));
+    s.appendChild(el('span', 'chip', `${(c.turns || []).filter(t => t.from !== 'system').length} msgs`));
+    s.appendChild(el('span', 'id', c.conversation_id));
+    d.appendChild(s);
+    const body = el('div', 'cbody');
+    for (const t of c.turns || []) {
+      if (t.from === 'system') addSys(body, t.body, t.body.startsWith('end') ? 'end' : 'wait');
+      else if (t.from === 'bot') addBubble(body, c.send_as === 'merchant_on_behalf' ? c.merchant_name : 'Vera', t.body, 'bot');
+      else addBubble(body, t.from === 'customer' ? 'Customer' : 'Merchant', t.body, 'them');
+    }
+    d.appendChild(body); box.appendChild(d);
+  }
+}
+$('#refLive').onclick = loadLive;
+function liveLoop() { clearInterval(liveTimer); liveTimer = setInterval(() => { if ($('#autoRef').checked && $('#tab-live').classList.contains('on')) loadLive(); }, 5000); }
+
+/* api tester */
+let presets = [];
+async function initTester() {
+  const { data } = await api('/ui/api/presets');
+  presets = data.presets || [];
+  const sel = $('#preset'); sel.innerHTML = '';
+  presets.forEach((p, i) => sel.appendChild(new Option(`${p.method} ${p.path} — ${p.name}`, i)));
+  sel.onchange = () => applyPreset(presets[+sel.value]);
+  if (presets.length) applyPreset(presets[0]);
+  loadFillOptions();
+}
+function applyPreset(p) {
+  $('#method').value = p.method; $('#path').value = p.path;
+  $('#reqBody').value = p.body == null ? '' : JSON.stringify(p.body, null, 2);
+  $('#reqErr').textContent = '';
+  $('#fillRow').style.display = /compose|converse/.test(p.path) ? '' : 'none';
+}
+async function loadFillOptions() {
+  const { data } = await api('/ui/api/contexts');
+  const sel = $('#fillTrig'); sel.innerHTML = '';
+  const trigs = data.triggers || [];
+  sel.appendChild(new Option(trigs.length ? 'Use a trigger you loaded…' : 'No data loaded (Status & data tab)', ''));
+  const M = data.merchants || {};
+  trigs.forEach(t => sel.appendChild(new Option(`${human(t.kind)} — ${(M[t.merchant_id] || {}).name || t.merchant_id}`, t.id)));
+  $('#fillBtn').disabled = !trigs.length;
+}
+$('#fillBtn').onclick = async () => {
+  const tid = $('#fillTrig').value; if (!tid) return;
+  const { data } = await api('/ui/api/bundle?trigger_id=' + encodeURIComponent(tid));
+  let cur = {}; try { cur = JSON.parse($('#reqBody').value || '{}'); } catch (e) {}
+  const body = { category: data.category, merchant: data.merchant, trigger: data.trigger, customer: data.customer, now: cur.now || '2026-04-26T10:00:00Z' };
+  if ($('#path').value.includes('converse')) body.messages = cur.messages || ["Ok let's do it. What's next?"];
+  $('#reqBody').value = JSON.stringify(body, null, 2); toast('Body filled from loaded data');
+};
+$('#fmtBtn').onclick = () => {
+  try { $('#reqBody').value = JSON.stringify(JSON.parse($('#reqBody').value), null, 2); $('#reqErr').textContent = ''; }
+  catch (e) { $('#reqErr').textContent = 'Not valid JSON: ' + e.message; }
+};
+$('#resetBody').onclick = () => applyPreset(presets[+$('#preset').value] || presets[0]);
+$('#curlBtn').onclick = async () => {
+  const m = $('#method').value, url = baseUrl() + $('#path').value;
+  let cmd = `curl -X ${m} '${url}'`;
+  if (m !== 'GET' && $('#reqBody').value.trim()) {
+    let b = $('#reqBody').value; try { b = JSON.stringify(JSON.parse(b)); } catch (e) {}
+    cmd += ` -H 'Content-Type: application/json' -d '${b.replace(/'/g, "'\\''")}'`;
+  }
+  try { await navigator.clipboard.writeText(cmd); toast('cURL copied — Postman: Import → Raw text'); } catch (e) { toast('Copy failed'); }
+};
+$('#reqBody').addEventListener('keydown', (e) => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); sendReq(); } });
+$('#sendReq').onclick = () => sendReq();
+
+async function sendReq() {
+  const m = $('#method').value, url = baseUrl() + $('#path').value;
+  const opts = { method: m, headers: {} };
+  $('#reqErr').textContent = '';
+  if (m !== 'GET') {
+    const raw = $('#reqBody').value.trim() || '{}';
+    try { JSON.parse(raw); } catch (e) { $('#reqErr').textContent = 'Body is not valid JSON: ' + e.message; return; }
+    opts.headers['Content-Type'] = 'application/json'; opts.body = raw;
+  }
+  $('#sendReq').disabled = true; $('#resBody').textContent = 'Sending…'; $('#resPreview').innerHTML = '';
+  const t0 = performance.now();
+  try {
+    const r = await fetch(url, opts);
+    const ms = Math.round(performance.now() - t0);
+    const text = await r.text();
+    let j = null; try { j = JSON.parse(text); } catch (e) {}
+    $('#resStatus').className = 'chip s' + String(r.status)[0]; $('#resStatus').textContent = r.status + ' ' + (r.statusText || '');
+    $('#resTime').className = 'chip'; $('#resTime').textContent = ms + ' ms';
+    $('#resBody').textContent = j ? JSON.stringify(j, null, 2) : text;
+    if (j) renderPreview(j);
+    if (/\/v1\/(context|teardown)/.test(url)) { health(); ctxCache = null; loadFillOptions(); }
+  } catch (e) {
+    $('#resStatus').className = 'chip s5'; $('#resStatus').textContent = 'Network error';
+    $('#resBody').textContent = `Could not reach ${url}\n${e.message}\n\nCheck the base URL (and that the server is running).`;
+  } finally { $('#sendReq').disabled = false; }
+}
+function renderPreview(j) {
+  const box = $('#resPreview'); box.innerHTML = '';
+  const botName = (send_as) => send_as === 'merchant_on_behalf' ? 'Sent as the merchant' : 'Vera';
+  const meta = (o) => { const r = el('div', 'metarow'); [['CTA', o.cta], ['as', o.send_as], ['lang', o.language]].forEach(([k, v]) => v && r.appendChild(el('span', 'chip', `${k}: ${v}`))); return r; };
+  if (typeof j.body === 'string') addBubble(box, botName(j.send_as), j.body, 'bot', meta(j));
+  if (Array.isArray(j.actions)) j.actions.forEach(a => addBubble(box, botName(a.send_as) + (a.merchant_id ? ' → ' + a.merchant_id : ''), a.body, 'bot', meta(a)));
+  if (j.action) {
+    if (j.action === 'send') addBubble(box, 'Vera', j.body, 'bot');
+    else addSys(box, j.action === 'wait' ? `⏸ waits ${fmtUp(j.wait_seconds || 0)} — ${j.rationale}` : `■ ends — ${j.rationale}`, j.action === 'wait' ? 'wait' : 'end');
+  }
+  if (Array.isArray(j.replies)) {
+    box.innerHTML = '';
+    if (j.opening_message) addBubble(box, botName(j.opening_message.send_as), j.opening_message.body, 'bot');
+    j.replies.forEach(r => {
+      addBubble(box, 'Merchant', String(r.message), 'them');
+      if (r.action === 'send') addBubble(box, null, r.body, 'bot', el('div', 'metarow')).lastChild.appendChild(el('span', 'chip', 'read as: ' + human(r.read_as)));
+      else addSys(box, r.action === 'wait' ? `⏸ waits ${fmtUp(r.wait_seconds || 0)} — ${r.rationale}` : `■ ends — ${r.rationale}`, r.action === 'wait' ? 'wait' : 'end');
+    });
+  }
+}
+
+health(); meta(); setInterval(health, 5000); liveLoop(); initTester();
+const startTab = recall('vera_tab'); if (startTab && document.getElementById('tab-' + startTab)) showTab(startTab);
+</script>
+</body>
+</html>
